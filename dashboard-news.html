@@ -14,6 +14,20 @@
     --text: #222;
     --text-muted: #777;
     --accent: #2b5fad;
+    --article-hover: #f4f8ff;
+    --thumb-bg: #dfe4ea;
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161f;
+    --header-blue: #1c3d73;
+    --header-blue-dark: #0e2043;
+    --card-bg: #1c1f2b;
+    --border: #2e3345;
+    --text: #eef0f6;
+    --text-muted: #8b90a3;
+    --accent: #4f8fef;
+    --article-hover: #232736;
+    --thumb-bg: #2e3345;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
@@ -23,7 +37,46 @@
     background: linear-gradient(180deg, var(--header-blue), var(--header-blue-dark));
     color: #fff; padding: 10px 16px; text-align: center;
     font-size: 18px; font-weight: 600;
+    position: relative; display: flex; align-items: center; justify-content: center;
   }
+  .theme-toggle {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,.15); border: none; color: #fff;
+    border-radius: 20px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,.28); }
+
+  .tab-wrap { position: relative; display: flex; align-items: center; }
+  .tab-arrow {
+    padding: 8px 8px; color: #cfe0f5; cursor: pointer; user-select: none;
+    border-radius: 0 6px 0 0; font-size: 10px;
+  }
+  .tab-arrow:hover { background: rgba(255,255,255,.12); }
+  .tab-dropdown {
+    display: none; position: absolute; top: 100%; left: 0; z-index: 50;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 0 6px 6px 6px;
+    min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,.25); overflow: hidden;
+  }
+  .tab-dropdown.open { display: block; }
+  .tab-dropdown-item {
+    padding: 9px 14px; cursor: pointer; color: var(--text); font-size: 13px; font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-dropdown-item:last-child { border-bottom: none; }
+  .tab-dropdown-item:hover { background: var(--article-hover); color: var(--accent); }
+
+  .focus-bar {
+    display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+    background: var(--card-bg); border-bottom: 1px solid var(--border);
+  }
+  .focus-bar .back-btn {
+    background: var(--header-blue); color: #fff; border: none; border-radius: 5px;
+    padding: 6px 14px; font-weight: 600; cursor: pointer; font-size: 13px;
+  }
+  .focus-bar .back-btn:hover { background: var(--header-blue-dark); }
+  .focus-bar .name { font-weight: 700; }
+  .focus-grid { display: block; max-width: 900px; margin: 0 auto; padding: 12px; }
+  .focus-grid .widget-body { max-height: none; }
   .tabs {
     display: flex; align-items: center; gap: 2px;
     background: var(--header-blue-dark); padding: 0 8px;
@@ -77,12 +130,12 @@
 
   .article {
     display: flex; gap: 10px; padding: 9px 10px;
-    border-bottom: 1px solid #eef0f3; cursor: pointer; text-decoration: none; color: inherit;
+    border-bottom: 1px solid var(--border); cursor: pointer; text-decoration: none; color: inherit;
   }
-  .article:hover { background: #f4f8ff; }
+  .article:hover { background: var(--article-hover); }
   .article img.thumb {
     width: 62px; height: 46px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
-    background: #dfe4ea;
+    background: var(--thumb-bg);
   }
   .article .a-title { font-weight: 600; line-height: 1.3; margin-bottom: 3px; }
   .article .a-title:hover { color: var(--accent); text-decoration: underline; }
@@ -105,7 +158,7 @@
     display: flex; gap: 10px; align-items: flex-start; background: var(--card-bg);
     border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px;
   }
-  .rl-item img.thumb { width: 80px; height: 58px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #dfe4ea; }
+  .rl-item img.thumb { width: 80px; height: 58px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: var(--thumb-bg); }
   .rl-item .rl-body { flex: 1; }
   .rl-item .rl-title { font-weight: 600; margin-bottom: 3px; }
   .rl-item .rl-title a { color: inherit; text-decoration: none; }
@@ -137,7 +190,7 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: #fff; border-radius: 8px; padding: 20px; width: 480px; max-width: 92vw;
+    background: var(--card-bg); color: var(--text); border-radius: 8px; padding: 20px; width: 480px; max-width: 92vw;
     max-height: 85vh; overflow-y: auto;
   }
   .modal h2 { font-size: 16px; margin-bottom: 14px; color: var(--header-blue-dark); }
@@ -156,7 +209,7 @@
 
   .src-row {
     display: flex; align-items: center; gap: 8px; padding: 6px 4px;
-    border-bottom: 1px solid #eef0f3; font-size: 12px;
+    border-bottom: 1px solid var(--border); font-size: 12px;
   }
   .src-row .name { flex: 1; font-weight: 600; }
   .src-row .clicks { color: var(--text-muted); }
@@ -167,8 +220,15 @@
 </head>
 <body>
 
-<div class="topbar">📰 Mon Dashboard News</div>
+<div class="topbar">📰 Mon Dashboard News
+  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Sombre</button>
+</div>
 <div class="tabs" id="tabs"></div>
+<div class="focus-bar" id="focusBar" style="display:none">
+  <button class="back-btn" onclick="closeFocus()">← Retour</button>
+  <span class="name" id="focusName"></span>
+</div>
+<div class="grid focus-grid" id="focusGrid" style="display:none"></div>
 <div class="grid" id="grid"></div>
 <div class="readlater-list" id="readlaterList" style="display:none"></div>
 <div class="readlater-list" id="savelinksList" style="display:none">
@@ -252,6 +312,19 @@ const DEFAULT_SOURCES = {
 
 const HEADER_COLORS = ["#2b5fad", "#c0392b", "#16785c", "#8e44ad", "#b9770e", "#2c3e50", "#1a7a9e", "#a03966"];
 
+// ================== THÈME ==================
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  document.getElementById("themeToggle").textContent = theme === "dark" ? "☀️ Clair" : "🌙 Sombre";
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const next = current === "dark" ? "light" : "dark";
+  localStorage.setItem("nd_theme", next);
+  applyTheme(next);
+}
+applyTheme(localStorage.getItem("nd_theme") || "light");
+
 // ================== ÉTAT (localStorage) ==================
 const store = {
   get clicks()  { return JSON.parse(localStorage.getItem("nd_clicks")  || "{}"); },
@@ -320,11 +393,41 @@ function renderTabs() {
   const el = document.getElementById("tabs");
   el.innerHTML = "";
   CATS.forEach(cat => {
+    const wrap = document.createElement("div");
+    wrap.className = "tab-wrap";
+
     const t = document.createElement("div");
     t.className = "tab" + (cat === store.tab ? " active" : "");
     t.innerHTML = `${cat} <span class="count">${allSources(cat).length}</span>`;
-    t.onclick = () => { store.tab = cat; renderTabs(); renderGrid(); };
-    el.appendChild(t);
+    t.onclick = () => { closeFocus(); store.tab = cat; renderTabs(); renderGrid(); };
+    wrap.appendChild(t);
+
+    const arrow = document.createElement("div");
+    arrow.className = "tab-arrow";
+    arrow.textContent = "▾";
+    const dropdown = document.createElement("div");
+    dropdown.className = "tab-dropdown";
+    allSources(cat).forEach(src => {
+      const item = document.createElement("div");
+      item.className = "tab-dropdown-item";
+      item.textContent = src.name;
+      item.onclick = e => {
+        e.stopPropagation();
+        dropdown.classList.remove("open");
+        store.tab = cat;
+        renderTabs();
+        openFocus(src);
+      };
+      dropdown.appendChild(item);
+    });
+    arrow.onclick = e => {
+      e.stopPropagation();
+      document.querySelectorAll(".tab-dropdown.open").forEach(d => { if (d !== dropdown) d.classList.remove("open"); });
+      dropdown.classList.toggle("open");
+    };
+    wrap.appendChild(arrow);
+    wrap.appendChild(dropdown);
+    el.appendChild(wrap);
   });
   const manage = document.createElement("span");
   manage.className = "link-manage";
@@ -353,10 +456,47 @@ function renderTabs() {
   el.appendChild(sl);
 }
 
+function openFocus(src) {
+  const grid = document.getElementById("grid");
+  const rlList = document.getElementById("readlaterList");
+  const slList = document.getElementById("savelinksList");
+  const focusBar = document.getElementById("focusBar");
+  const focusGrid = document.getElementById("focusGrid");
+  grid.style.display = "none";
+  rlList.style.display = "none";
+  slList.style.display = "none";
+  focusBar.style.display = "flex";
+  focusGrid.style.display = "block";
+  document.getElementById("focusName").textContent = src.name;
+  focusGrid.innerHTML = "";
+  const w = document.createElement("div");
+  w.className = "widget";
+  const domain = new URL(src.url).hostname;
+  w.innerHTML = `
+    <div class="widget-header" style="background:${HEADER_COLORS[0]}">
+      <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" alt="">
+      <span class="title">${esc(src.name)}</span>
+      <button title="Rafraîchir">⟳</button>
+    </div>
+    <div class="widget-body"><div class="widget-msg">Chargement…</div></div>`;
+  const body = w.querySelector(".widget-body");
+  w.querySelector("button").onclick = () => loadFeed(src, body);
+  focusGrid.appendChild(w);
+  loadFeed(src, body);
+}
+
+function closeFocus() {
+  document.getElementById("focusBar").style.display = "none";
+  document.getElementById("focusGrid").style.display = "none";
+  renderGrid();
+}
+
 function renderGrid() {
   const grid = document.getElementById("grid");
   const rlList = document.getElementById("readlaterList");
   const slList = document.getElementById("savelinksList");
+  document.getElementById("focusBar").style.display = "none";
+  document.getElementById("focusGrid").style.display = "none";
   grid.style.display = "none";
   rlList.style.display = "none";
   slList.style.display = "none";
@@ -638,6 +778,9 @@ function openManage() {
 }
 
 // ================== INIT ==================
+document.addEventListener("click", () => {
+  document.querySelectorAll(".tab-dropdown.open").forEach(d => d.classList.remove("open"));
+});
 fetchReadLater().then(() => renderTabs());
 renderTabs();
 renderGrid();
