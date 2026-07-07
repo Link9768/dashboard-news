@@ -73,7 +73,7 @@
     border-radius: 4px; cursor: pointer; padding: 2px 7px; font-size: 12px;
   }
   .widget-header button:hover { background: rgba(255,255,255,.35); }
-  .widget-body { flex: 1; min-height: 200px; max-height: 430px; overflow-y: auto; }
+  .widget-body { flex: 1; min-height: 200px; max-height: 600px; overflow-y: auto; }
 
   .article {
     display: flex; gap: 10px; padding: 9px 10px;
@@ -214,7 +214,7 @@
 // ================== CONFIG ==================
 const PROXY = "https://n8n.srv1250642.hstgr.cloud/webhook/rss-proxy?url=";
 const MAX_WIDGETS = 6;
-const ARTICLES_PER_WIDGET = 8;
+const ARTICLES_PER_WIDGET = 18;
 
 const DEFAULT_SOURCES = {
   "News": [
@@ -261,22 +261,41 @@ const store = {
   get removed() { return JSON.parse(localStorage.getItem("nd_removed") || "[]"); },
   set removed(v){ localStorage.setItem("nd_removed", JSON.stringify(v)); },
   get tab()     { return localStorage.getItem("nd_tab") || Object.keys(DEFAULT_SOURCES)[0]; },
-  set tab(v)    { localStorage.setItem("nd_tab", v); },
-  get readlater()  { return JSON.parse(localStorage.getItem("nd_readlater") || "[]"); },
-  set readlater(v) { localStorage.setItem("nd_readlater", JSON.stringify(v)); }
+  set tab(v)    { localStorage.setItem("nd_tab", v); }
 };
 
 const READLATER_TAB = "__readlater__";
 const SAVELINKS_TAB = "__savelinks__";
+const READLATER_API = "https://n8n.srv1250642.hstgr.cloud/webhook/readlater";
 
-function isSaved(link) { return store.readlater.some(x => x.link === link); }
+// Cache local des articles sauvegardés, resynchronisé à chaque fetchReadLater()
+let readLaterCache = [];
 
-function toggleSave(srcName, it) {
-  let rl = store.readlater;
-  const i = rl.findIndex(x => x.link === it.link);
-  if (i >= 0) rl.splice(i, 1);
-  else rl.unshift({ link: it.link, title: it.title, date: it.date, img: it.img, srcName });
-  store.readlater = rl;
+async function readLaterCall(body) {
+  const res = await fetch(READLATER_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return res.json().catch(() => null);
+}
+
+async function fetchReadLater() {
+  const data = await readLaterCall({ action: "list" });
+  readLaterCache = Array.isArray(data) ? data : [];
+  return readLaterCache;
+}
+
+function isSaved(link) { return readLaterCache.some(x => x.link === link); }
+
+async function toggleSave(srcName, it) {
+  if (isSaved(it.link)) {
+    readLaterCache = readLaterCache.filter(x => x.link !== it.link);
+    await readLaterCall({ action: "remove", link: it.link });
+  } else {
+    readLaterCache.unshift({ link: it.link, title: it.title, date: it.date, img: it.img, srcName });
+    await readLaterCall({ action: "add", link: it.link, title: it.title, date: it.date, img: it.img || "", srcName });
+  }
 }
 
 function allSources(cat) {
@@ -323,7 +342,7 @@ function renderTabs() {
 
   const rl = document.createElement("div");
   rl.className = "tab" + (store.tab === READLATER_TAB ? " active" : "");
-  rl.innerHTML = `🔖 À lire plus tard <span class="count">${store.readlater.length}</span>`;
+  rl.innerHTML = `🔖 À lire plus tard <span class="count">${readLaterCache.length}</span>`;
   rl.onclick = () => { store.tab = READLATER_TAB; renderTabs(); renderGrid(); };
   el.appendChild(rl);
 
@@ -373,9 +392,11 @@ function renderGrid() {
   });
 }
 
-function renderReadLater() {
+async function renderReadLater() {
   const rlList = document.getElementById("readlaterList");
-  const items = store.readlater;
+  rlList.innerHTML = `<div class="widget-msg">Chargement…</div>`;
+  const items = await fetchReadLater();
+  renderTabs();
   if (!items.length) {
     rlList.innerHTML = `<div class="widget-msg">Aucun article sauvegardé pour l'instant.</div>`;
     return;
@@ -397,21 +418,24 @@ function rlItemEl(it, onRemove) {
       <div class="rl-src">${esc(it.srcName)}${dateStr ? " • " + dateStr : ""}</div>
     </div>
     <button class="rl-remove" title="Retirer">✕</button>`;
-  row.querySelector(".rl-remove").onclick = () => {
-    store.readlater = store.readlater.filter(x => x.link !== it.link);
-    renderTabs(); onRemove();
+  row.querySelector(".rl-remove").onclick = async () => {
+    await readLaterCall({ action: "remove", link: it.link });
+    onRemove();
   };
   return row;
 }
 
-function renderSaveLinks() {
+async function renderSaveLinks() {
   const box = document.getElementById("savelinksItems");
-  const items = store.readlater.filter(it => it.srcName === "Save links");
+  box.innerHTML = `<div class="widget-msg">Chargement…</div>`;
+  const all = await fetchReadLater();
+  renderTabs();
+  const items = all.filter(it => it.srcName === "Save links");
   box.innerHTML = items.length ? "" : `<div class="widget-msg">Aucun lien sauvegardé pour l'instant.</div>`;
   items.forEach(it => box.appendChild(rlItemEl(it, renderSaveLinks)));
 }
 
-function submitSaveLink() {
+async function submitSaveLink() {
   const input = document.getElementById("savelinksUrl");
   const err = document.getElementById("savelinksErr");
   const url = input.value.trim();
@@ -428,9 +452,8 @@ function submitSaveLink() {
   }
   let title = url;
   try { title = new URL(url).hostname.replace(/^www\./, "") + " — lien sauvegardé"; } catch (e) {}
-  toggleSave("Save links", { link: url, title, date: new Date().toISOString(), img: "" });
+  await readLaterCall({ action: "add", link: url, title, date: new Date().toISOString(), img: "", srcName: "Save links" });
   input.value = "";
-  renderTabs();
   renderSaveLinks();
 }
 
@@ -518,12 +541,12 @@ function articleEl(src, it) {
     if (hdr) hdr.textContent = c[src.id] + " lus";
   });
   const saveBtn = a.querySelector(".a-save");
-  saveBtn.addEventListener("click", e => {
+  saveBtn.addEventListener("click", async e => {
     e.preventDefault();
     e.stopPropagation();
-    toggleSave(src.name, it);
     saveBtn.classList.toggle("saved");
     saveBtn.textContent = saveBtn.classList.contains("saved") ? "✓" : "+";
+    await toggleSave(src.name, it);
     renderTabs();
   });
   return a;
@@ -615,6 +638,7 @@ function openManage() {
 }
 
 // ================== INIT ==================
+fetchReadLater().then(() => renderTabs());
 renderTabs();
 renderGrid();
 </script>
