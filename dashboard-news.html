@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Dashboard News</title>
+<style>
+  :root {
+    --bg: #eef1f5;
+    --header-blue: #2b5fad;
+    --header-blue-dark: #1e4a8f;
+    --card-bg: #ffffff;
+    --border: #d5dbe3;
+    --text: #222;
+    --text-muted: #777;
+    --accent: #2b5fad;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  /* ===== Header ===== */
+  .topbar {
+    background: linear-gradient(180deg, var(--header-blue), var(--header-blue-dark));
+    color: #fff; padding: 10px 16px; text-align: center;
+    font-size: 18px; font-weight: 600;
+  }
+  .tabs {
+    display: flex; align-items: center; gap: 2px;
+    background: var(--header-blue-dark); padding: 0 8px;
+  }
+  .tab {
+    padding: 8px 18px; color: #cfe0f5; cursor: pointer;
+    border-radius: 6px 6px 0 0; font-weight: 600; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab .count {
+    background: rgba(255,255,255,.25); border-radius: 10px;
+    padding: 0 7px; font-size: 11px;
+  }
+  .tab.active { background: var(--bg); color: var(--header-blue-dark); }
+  .tab:not(.active):hover { background: rgba(255,255,255,.12); }
+  .tabs .spacer { flex: 1; }
+  .btn-add {
+    background: #fff; color: var(--header-blue-dark); border: none;
+    border-radius: 5px; padding: 6px 14px; margin: 5px 0;
+    font-weight: 700; cursor: pointer; font-size: 13px;
+  }
+  .btn-add:hover { background: #e8f0fc; }
+
+  /* ===== Grid ===== */
+  .grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; padding: 12px; max-width: 1500px; margin: 0 auto;
+  }
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 720px)  { .grid { grid-template-columns: 1fr; } }
+
+  /* ===== Widget ===== */
+  .widget {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07);
+  }
+  .widget-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; color: #fff; font-weight: 700; font-size: 13px;
+  }
+  .widget-header img { width: 16px; height: 16px; border-radius: 3px; background: #fff; }
+  .widget-header .title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .widget-header .reads { font-size: 11px; font-weight: 400; opacity: .85; }
+  .widget-header button {
+    background: rgba(255,255,255,.2); border: none; color: #fff;
+    border-radius: 4px; cursor: pointer; padding: 2px 7px; font-size: 12px;
+  }
+  .widget-header button:hover { background: rgba(255,255,255,.35); }
+  .widget-body { flex: 1; min-height: 200px; max-height: 430px; overflow-y: auto; }
+
+  .article {
+    display: flex; gap: 10px; padding: 9px 10px;
+    border-bottom: 1px solid #eef0f3; cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .article:hover { background: #f4f8ff; }
+  .article img.thumb {
+    width: 62px; height: 46px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
+    background: #dfe4ea;
+  }
+  .article .a-title { font-weight: 600; line-height: 1.3; margin-bottom: 3px; }
+  .article .a-title:hover { color: var(--accent); text-decoration: underline; }
+  .article .a-date { color: var(--text-muted); font-size: 11px; margin-bottom: 2px; }
+  .article .a-desc { color: #555; font-size: 12px; line-height: 1.35; }
+  .article .a-save {
+    align-self: flex-start; background: none; border: 1px solid var(--border);
+    border-radius: 50%; width: 24px; height: 24px; flex-shrink: 0; cursor: pointer;
+    font-size: 15px; line-height: 1; color: var(--text-muted); display: flex;
+    align-items: center; justify-content: center;
+  }
+  .article .a-save:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .article .a-save.saved { background: #16785c; color: #fff; border-color: #16785c; }
+
+  .widget-msg { padding: 24px 12px; text-align: center; color: var(--text-muted); }
+  .widget-msg.error { color: #b33; }
+
+  .readlater-list { padding: 8px; max-width: 900px; margin: 0 auto; }
+  .rl-item {
+    display: flex; gap: 10px; align-items: flex-start; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 8px;
+  }
+  .rl-item img.thumb { width: 80px; height: 58px; object-fit: cover; border-radius: 4px; flex-shrink: 0; background: #dfe4ea; }
+  .rl-item .rl-body { flex: 1; }
+  .rl-item .rl-title { font-weight: 600; margin-bottom: 3px; }
+  .rl-item .rl-title a { color: inherit; text-decoration: none; }
+  .rl-item .rl-title a:hover { color: var(--accent); text-decoration: underline; }
+  .rl-item .rl-src { font-size: 11px; color: var(--text-muted); }
+  .rl-item .rl-remove {
+    background: none; border: none; color: #b33; cursor: pointer; font-size: 16px; padding: 4px;
+  }
+
+  .savelinks-box {
+    max-width: 700px; margin: 0 auto 16px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 6px; padding: 16px;
+    display: flex; gap: 8px;
+  }
+  .savelinks-box input {
+    flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px;
+  }
+  .savelinks-box button {
+    background: var(--header-blue); color: #fff; border: none; border-radius: 5px;
+    padding: 8px 18px; font-weight: 700; cursor: pointer;
+  }
+  .savelinks-box button:hover { background: var(--header-blue-dark); }
+  .savelinks-err { max-width: 700px; margin: -8px auto 12px; color: #b33; font-size: 12px; display: none; }
+
+  /* ===== Modal ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff; border-radius: 8px; padding: 20px; width: 480px; max-width: 92vw;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal h2 { font-size: 16px; margin-bottom: 14px; color: var(--header-blue-dark); }
+  .modal label { display: block; font-weight: 600; margin: 10px 0 4px; }
+  .modal input, .modal select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px;
+  }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal .actions button {
+    padding: 7px 16px; border-radius: 5px; border: none; cursor: pointer; font-weight: 600;
+  }
+  .modal .btn-primary { background: var(--header-blue); color: #fff; }
+  .modal .btn-cancel { background: #e3e7ed; }
+  .modal .hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .modal .err { color: #b33; font-size: 12px; margin-top: 8px; display: none; }
+
+  .src-row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 4px;
+    border-bottom: 1px solid #eef0f3; font-size: 12px;
+  }
+  .src-row .name { flex: 1; font-weight: 600; }
+  .src-row .clicks { color: var(--text-muted); }
+  .src-row .del { background: none; border: none; color: #b33; cursor: pointer; font-size: 14px; }
+  .link-manage { font-size: 12px; color: #cfe0f5; cursor: pointer; padding: 8px 10px; text-decoration: underline; }
+  .link-manage:hover { color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="topbar">📰 Mon Dashboard News</div>
+<div class="tabs" id="tabs"></div>
+<div class="grid" id="grid"></div>
+<div class="readlater-list" id="readlaterList" style="display:none"></div>
+<div class="readlater-list" id="savelinksList" style="display:none">
+  <div class="savelinks-box">
+    <input id="savelinksUrl" placeholder="Colle un lien ici (https://…)" onkeydown="if(event.key==='Enter')submitSaveLink()">
+    <button onclick="submitSaveLink()">Sauvegarder</button>
+  </div>
+  <div class="savelinks-err" id="savelinksErr"></div>
+  <div id="savelinksItems"></div>
+</div>
+
+<!-- Modal ajout source -->
+<div class="modal-overlay" id="addOverlay">
+  <div class="modal">
+    <h2>➕ Ajouter une source</h2>
+    <label>Catégorie</label>
+    <select id="addCat"></select>
+    <label>Nom de la source</label>
+    <input id="addName" placeholder="ex: Gamekult">
+    <label>URL du flux RSS</label>
+    <input id="addUrl" placeholder="https://exemple.com/feed">
+    <div class="hint">Astuce : essaie /feed, /rss ou /rss.xml après l'URL du site.</div>
+    <div class="err" id="addErr"></div>
+    <div class="actions">
+      <button class="btn-cancel" onclick="closeAdd()">Annuler</button>
+      <button class="btn-primary" onclick="submitAdd()">Tester &amp; ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal gestion sources -->
+<div class="modal-overlay" id="manageOverlay">
+  <div class="modal">
+    <h2>⚙️ Sources &amp; classement (clics)</h2>
+    <div id="manageList"></div>
+    <div class="actions">
+      <button class="btn-cancel" onclick="document.getElementById('manageOverlay').classList.remove('open')">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================== CONFIG ==================
+const PROXY = "https://n8n.srv1250642.hstgr.cloud/webhook/rss-proxy?url=";
+const MAX_WIDGETS = 6;
+const ARTICLES_PER_WIDGET = 8;
+
+const DEFAULT_SOURCES = {
+  "News": [
+    { id: "franceinfo",  name: "Franceinfo",           url: "https://www.francetvinfo.fr/titres.rss" },
+    { id: "mediapart",   name: "Mediapart",            url: "https://www.mediapart.fr/articles/feed" },
+    { id: "liberation",  name: "Libération",           url: "https://www.liberation.fr/arc/outboundfeeds/rss-all/?outputType=xml" },
+    { id: "lemedia",     name: "Le Média",             url: "https://api.lemediatv.fr/rss.xml" },
+    { id: "mondediplo",  name: "Le Monde diplomatique", url: "https://www.monde-diplomatique.fr/recents.xml" },
+    { id: "lemonde",     name: "Le Monde",             url: "https://www.lemonde.fr/rss/une.xml" }
+  ],
+  "Tech": [
+    { id: "frandroid",    name: "Frandroid",     url: "https://www.frandroid.com/feed" },
+    { id: "numerama",     name: "Numerama",      url: "https://www.numerama.com/feed/" },
+    { id: "pressecitron", name: "Presse-citron", url: "https://www.presse-citron.net/feed/" },
+    { id: "korben",       name: "Korben",        url: "https://korben.info/feed" },
+    { id: "01net",        name: "01net",         url: "https://www.01net.com/feed/" },
+    { id: "clubic",       name: "Clubic",        url: "https://www.clubic.com/feed/news.rss" }
+  ],
+  "IA": [
+    { id: "actuia",     name: "ActuIA",        url: "https://www.actuia.com/feed/" },
+    { id: "devcomia",   name: "Developpez IA", url: "https://intelligence-artificielle.developpez.com/rss.php" }
+  ],
+  "Gaming": [
+    { id: "gamekyo",   name: "Gamekyo",        url: "https://gamekyo.com/news.xml" },
+    { id: "canardpc",  name: "Canard PC",      url: "https://www.canardpc.com/feed/" },
+    { id: "jvcom",     name: "jeuxvideo.com",  url: "https://www.jeuxvideo.com/rss/rss.xml" },
+    { id: "pcgamer",   name: "PC Gamer",       url: "https://www.pcgamer.com/rss/" },
+    { id: "gamespot",  name: "GameSpot",       url: "https://www.gamespot.com/feeds/mashup/" },
+    { id: "eurogamer", name: "Eurogamer",      url: "https://www.eurogamer.net/feed" },
+    { id: "polygon",   name: "Polygon",        url: "https://www.polygon.com/feed/" },
+    { id: "ign",       name: "IGN",            url: "https://feeds.feedburner.com/ign/all" },
+    { id: "kotaku",    name: "Kotaku",         url: "https://kotaku.com/rss" }
+  ]
+};
+
+const HEADER_COLORS = ["#2b5fad", "#c0392b", "#16785c", "#8e44ad", "#b9770e", "#2c3e50", "#1a7a9e", "#a03966"];
+
+// ================== ÉTAT (localStorage) ==================
+const store = {
+  get clicks()  { return JSON.parse(localStorage.getItem("nd_clicks")  || "{}"); },
+  set clicks(v) { localStorage.setItem("nd_clicks", JSON.stringify(v)); },
+  get custom()  { return JSON.parse(localStorage.getItem("nd_custom")  || "{}"); },
+  set custom(v) { localStorage.setItem("nd_custom", JSON.stringify(v)); },
+  get removed() { return JSON.parse(localStorage.getItem("nd_removed") || "[]"); },
+  set removed(v){ localStorage.setItem("nd_removed", JSON.stringify(v)); },
+  get tab()     { return localStorage.getItem("nd_tab") || Object.keys(DEFAULT_SOURCES)[0]; },
+  set tab(v)    { localStorage.setItem("nd_tab", v); },
+  get readlater()  { return JSON.parse(localStorage.getItem("nd_readlater") || "[]"); },
+  set readlater(v) { localStorage.setItem("nd_readlater", JSON.stringify(v)); }
+};
+
+const READLATER_TAB = "__readlater__";
+const SAVELINKS_TAB = "__savelinks__";
+
+function isSaved(link) { return store.readlater.some(x => x.link === link); }
+
+function toggleSave(srcName, it) {
+  let rl = store.readlater;
+  const i = rl.findIndex(x => x.link === it.link);
+  if (i >= 0) rl.splice(i, 1);
+  else rl.unshift({ link: it.link, title: it.title, date: it.date, img: it.img, srcName });
+  store.readlater = rl;
+}
+
+function allSources(cat) {
+  const custom = store.custom[cat] || [];
+  const removed = store.removed;
+  return DEFAULT_SOURCES[cat].concat(custom).filter(s => !removed.includes(s.id));
+}
+
+// Top 6 : tri par clics desc, ordre d'origine en cas d'égalité (tri stable)
+function topSources(cat) {
+  const clicks = store.clicks;
+  return allSources(cat)
+    .slice()
+    .sort((a, b) => (clicks[b.id] || 0) - (clicks[a.id] || 0))
+    .slice(0, MAX_WIDGETS);
+}
+
+// ================== RENDU ==================
+const CATS = Object.keys(DEFAULT_SOURCES);
+
+function renderTabs() {
+  const el = document.getElementById("tabs");
+  el.innerHTML = "";
+  CATS.forEach(cat => {
+    const t = document.createElement("div");
+    t.className = "tab" + (cat === store.tab ? " active" : "");
+    t.innerHTML = `${cat} <span class="count">${allSources(cat).length}</span>`;
+    t.onclick = () => { store.tab = cat; renderTabs(); renderGrid(); };
+    el.appendChild(t);
+  });
+  const manage = document.createElement("span");
+  manage.className = "link-manage";
+  manage.textContent = "Classement & sources";
+  manage.onclick = openManage;
+  const spacer = document.createElement("div");
+  spacer.className = "spacer";
+  const add = document.createElement("button");
+  add.className = "btn-add";
+  add.textContent = "+ Ajouter une source";
+  add.onclick = openAdd;
+  el.appendChild(spacer);
+  el.appendChild(manage);
+  el.appendChild(add);
+
+  const rl = document.createElement("div");
+  rl.className = "tab" + (store.tab === READLATER_TAB ? " active" : "");
+  rl.innerHTML = `🔖 À lire plus tard <span class="count">${store.readlater.length}</span>`;
+  rl.onclick = () => { store.tab = READLATER_TAB; renderTabs(); renderGrid(); };
+  el.appendChild(rl);
+
+  const sl = document.createElement("div");
+  sl.className = "tab" + (store.tab === SAVELINKS_TAB ? " active" : "");
+  sl.innerHTML = `🔗 Save links`;
+  sl.onclick = () => { store.tab = SAVELINKS_TAB; renderTabs(); renderGrid(); };
+  el.appendChild(sl);
+}
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  const rlList = document.getElementById("readlaterList");
+  const slList = document.getElementById("savelinksList");
+  grid.style.display = "none";
+  rlList.style.display = "none";
+  slList.style.display = "none";
+  if (store.tab === READLATER_TAB) {
+    rlList.style.display = "block";
+    renderReadLater();
+    return;
+  }
+  if (store.tab === SAVELINKS_TAB) {
+    slList.style.display = "block";
+    renderSaveLinks();
+    return;
+  }
+  grid.style.display = "grid";
+  grid.innerHTML = "";
+  const clicks = store.clicks;
+  topSources(store.tab).forEach((src, i) => {
+    const w = document.createElement("div");
+    w.className = "widget";
+    const domain = new URL(src.url).hostname;
+    w.innerHTML = `
+      <div class="widget-header" style="background:${HEADER_COLORS[i % HEADER_COLORS.length]}">
+        <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" alt="">
+        <span class="title">${esc(src.name)}</span>
+        <span class="reads">${clicks[src.id] || 0} lus</span>
+        <button title="Rafraîchir">⟳</button>
+      </div>
+      <div class="widget-body"><div class="widget-msg">Chargement…</div></div>`;
+    const body = w.querySelector(".widget-body");
+    w.querySelector("button").onclick = () => loadFeed(src, body);
+    grid.appendChild(w);
+    loadFeed(src, body);
+  });
+}
+
+function renderReadLater() {
+  const rlList = document.getElementById("readlaterList");
+  const items = store.readlater;
+  if (!items.length) {
+    rlList.innerHTML = `<div class="widget-msg">Aucun article sauvegardé pour l'instant.</div>`;
+    return;
+  }
+  rlList.innerHTML = "";
+  items.forEach(it => rlList.appendChild(rlItemEl(it, renderReadLater)));
+}
+
+function rlItemEl(it, onRemove) {
+  let dateStr = "";
+  const d = new Date(it.date);
+  if (!isNaN(d)) dateStr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const row = document.createElement("div");
+  row.className = "rl-item";
+  row.innerHTML = `
+    ${it.img ? `<img class="thumb" src="${esc(it.img)}" loading="lazy" onerror="this.remove()">` : ""}
+    <div class="rl-body">
+      <div class="rl-title"><a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a></div>
+      <div class="rl-src">${esc(it.srcName)}${dateStr ? " • " + dateStr : ""}</div>
+    </div>
+    <button class="rl-remove" title="Retirer">✕</button>`;
+  row.querySelector(".rl-remove").onclick = () => {
+    store.readlater = store.readlater.filter(x => x.link !== it.link);
+    renderTabs(); onRemove();
+  };
+  return row;
+}
+
+function renderSaveLinks() {
+  const box = document.getElementById("savelinksItems");
+  const items = store.readlater.filter(it => it.srcName === "Save links");
+  box.innerHTML = items.length ? "" : `<div class="widget-msg">Aucun lien sauvegardé pour l'instant.</div>`;
+  items.forEach(it => box.appendChild(rlItemEl(it, renderSaveLinks)));
+}
+
+function submitSaveLink() {
+  const input = document.getElementById("savelinksUrl");
+  const err = document.getElementById("savelinksErr");
+  const url = input.value.trim();
+  err.style.display = "none";
+  if (!/^https?:\/\//i.test(url)) {
+    err.textContent = "Lien invalide (doit commencer par http:// ou https://).";
+    err.style.display = "block";
+    return;
+  }
+  if (isSaved(url)) {
+    err.textContent = "Ce lien est déjà sauvegardé.";
+    err.style.display = "block";
+    return;
+  }
+  let title = url;
+  try { title = new URL(url).hostname.replace(/^www\./, "") + " — lien sauvegardé"; } catch (e) {}
+  toggleSave("Save links", { link: url, title, date: new Date().toISOString(), img: "" });
+  input.value = "";
+  renderTabs();
+  renderSaveLinks();
+}
+
+// ================== FETCH + PARSE RSS ==================
+async function loadFeed(src, body) {
+  body.innerHTML = `<div class="widget-msg">Chargement…</div>`;
+  try {
+    const res = await fetch(PROXY + encodeURIComponent(src.url));
+    const text = await res.text();
+    if (!res.ok || text.startsWith("ERROR")) throw new Error("proxy");
+    const items = parseFeed(text);
+    if (!items.length) throw new Error("vide");
+    body.innerHTML = "";
+    items.slice(0, ARTICLES_PER_WIDGET).forEach(it => body.appendChild(articleEl(src, it)));
+  } catch (e) {
+    body.innerHTML = `<div class="widget-msg error">⚠️ Flux indisponible<br><small>${esc(src.url)}</small></div>`;
+  }
+}
+
+function parseFeed(xmlText) {
+  const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+  if (doc.querySelector("parsererror")) return [];
+  const isAtom = !!doc.querySelector("feed > entry");
+  const nodes = isAtom ? doc.querySelectorAll("feed > entry") : doc.querySelectorAll("item");
+  return Array.from(nodes).map(n => {
+    const get = tag => { const el = n.querySelector(tag); return el ? el.textContent.trim() : ""; };
+    let link = "";
+    if (isAtom) {
+      const l = n.querySelector('link[rel="alternate"]') || n.querySelector("link");
+      link = l ? (l.getAttribute("href") || "") : "";
+    } else link = get("link");
+    let img = "";
+    const media = n.querySelector("content[url], thumbnail[url], enclosure[url]");
+    if (media) {
+      const u = media.getAttribute("url") || "";
+      if (!/\.(mp3|mp4|m4a)(\?|$)/i.test(u)) img = u;
+    }
+    const rawDesc = get("description") || get("summary") || getNS(n, "encoded");
+    if (!img) { const m = rawDesc.match(/<img[^>]+src=["']([^"']+)["']/i); if (m) img = m[1]; }
+    return {
+      title: get("title"),
+      link,
+      date: get("pubDate") || get("published") || get("updated") || getNS(n, "date"),
+      desc: stripHtml(rawDesc).slice(0, 160),
+      img
+    };
+  }).filter(it => it.title && it.link);
+}
+
+function getNS(node, localName) {
+  for (const el of node.children) if (el.localName === localName) return el.textContent.trim();
+  return "";
+}
+
+function stripHtml(html) {
+  const d = document.createElement("div");
+  d.innerHTML = html;
+  return (d.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+function articleEl(src, it) {
+  const a = document.createElement("a");
+  a.className = "article";
+  a.href = it.link;
+  a.target = "_blank";
+  a.rel = "noopener";
+  let dateStr = "";
+  const d = new Date(it.date);
+  if (!isNaN(d)) dateStr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+    " • " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  a.innerHTML = `
+    ${it.img ? `<img class="thumb" src="${esc(it.img)}" loading="lazy" onerror="this.remove()">` : ""}
+    <div>
+      <div class="a-title">${esc(it.title)}</div>
+      <div class="a-date">${dateStr}</div>
+      <div class="a-desc">${esc(it.desc)}</div>
+    </div>
+    <button class="a-save${isSaved(it.link) ? " saved" : ""}" title="Lire plus tard">${isSaved(it.link) ? "✓" : "+"}</button>`;
+  a.addEventListener("click", () => {
+    const c = store.clicks;
+    c[src.id] = (c[src.id] || 0) + 1;
+    store.clicks = c;
+    // maj compteur affiché sans recharger la grille
+    const hdr = a.closest(".widget").querySelector(".reads");
+    if (hdr) hdr.textContent = c[src.id] + " lus";
+  });
+  const saveBtn = a.querySelector(".a-save");
+  saveBtn.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleSave(src.name, it);
+    saveBtn.classList.toggle("saved");
+    saveBtn.textContent = saveBtn.classList.contains("saved") ? "✓" : "+";
+    renderTabs();
+  });
+  return a;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// ================== AJOUT SOURCE ==================
+function openAdd() {
+  const sel = document.getElementById("addCat");
+  sel.innerHTML = CATS.map(c => `<option ${c === store.tab ? "selected" : ""}>${c}</option>`).join("");
+  document.getElementById("addName").value = "";
+  document.getElementById("addUrl").value = "";
+  document.getElementById("addErr").style.display = "none";
+  document.getElementById("addOverlay").classList.add("open");
+}
+function closeAdd() { document.getElementById("addOverlay").classList.remove("open"); }
+
+async function submitAdd() {
+  const cat = document.getElementById("addCat").value;
+  const name = document.getElementById("addName").value.trim();
+  const url = document.getElementById("addUrl").value.trim();
+  const err = document.getElementById("addErr");
+  err.style.display = "none";
+  if (!name || !url.startsWith("http")) {
+    err.textContent = "Nom et URL (https://…) obligatoires.";
+    err.style.display = "block";
+    return;
+  }
+  err.textContent = "Test du flux en cours…";
+  err.style.display = "block";
+  try {
+    const res = await fetch(PROXY + encodeURIComponent(url));
+    const text = await res.text();
+    if (!parseFeed(text).length) throw new Error();
+  } catch (e) {
+    err.textContent = "❌ Ce flux ne répond pas ou n'est pas un RSS valide.";
+    return;
+  }
+  const custom = store.custom;
+  custom[cat] = custom[cat] || [];
+  custom[cat].push({ id: "custom_" + Date.now(), name, url });
+  store.custom = custom;
+  closeAdd();
+  store.tab = cat;
+  renderTabs();
+  renderGrid();
+}
+
+// ================== GESTION / CLASSEMENT ==================
+function openManage() {
+  const clicks = store.clicks;
+  const list = document.getElementById("manageList");
+  list.innerHTML = "";
+  CATS.forEach(cat => {
+    const h = document.createElement("div");
+    h.style.cssText = "font-weight:700;margin:12px 0 4px;color:#1e4a8f";
+    h.textContent = cat;
+    list.appendChild(h);
+    const sorted = allSources(cat).slice().sort((a, b) => (clicks[b.id] || 0) - (clicks[a.id] || 0));
+    sorted.forEach((s, i) => {
+      const row = document.createElement("div");
+      row.className = "src-row";
+      const visible = i < MAX_WIDGETS ? "👁️" : "▫️";
+      row.innerHTML = `<span>${visible}</span><span class="name">${esc(s.name)}</span>
+        <span class="clicks">${clicks[s.id] || 0} clics</span>`;
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "✕";
+      del.title = "Retirer cette source";
+      del.onclick = () => {
+        if (!confirm(`Retirer "${s.name}" ?`)) return;
+        if (s.id.startsWith("custom_")) {
+          const custom = store.custom;
+          custom[cat] = (custom[cat] || []).filter(x => x.id !== s.id);
+          store.custom = custom;
+        } else {
+          store.removed = store.removed.concat([s.id]);
+        }
+        openManage(); renderTabs(); renderGrid();
+      };
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  });
+  document.getElementById("manageOverlay").classList.add("open");
+}
+
+// ================== INIT ==================
+renderTabs();
+renderGrid();
+</script>
+</body>
+</html>
