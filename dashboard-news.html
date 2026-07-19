@@ -39,12 +39,16 @@
     font-size: 18px; font-weight: 600;
     position: relative; display: flex; align-items: center; justify-content: center;
   }
-  .theme-toggle {
+  .topbar-actions {
     position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    display: flex; gap: 8px;
+  }
+  .theme-toggle, .layout-toggle {
     background: rgba(255,255,255,.15); border: none; color: #fff;
     border-radius: 20px; padding: 6px 14px; font-size: 13px; cursor: pointer; font-weight: 600;
   }
-  .theme-toggle:hover { background: rgba(255,255,255,.28); }
+  .theme-toggle:hover, .layout-toggle:hover { background: rgba(255,255,255,.28); }
+  .layout-toggle.active { background: #fff; color: var(--header-blue-dark); }
 
   .tab-wrap { position: relative; display: flex; align-items: center; }
   .tab-arrow {
@@ -107,6 +111,20 @@
   }
   @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 720px)  { .grid { grid-template-columns: 1fr; } }
+  .grid.force-3x2 { grid-template-columns: repeat(3, 1fr) !important; }
+  .grid.force-3x2 .widget-body { max-height: 260px; }
+  body.kiosk-mode { height: 100vh; overflow: hidden; }
+  body.kiosk-mode .topbar,
+  body.kiosk-mode .tabs { display: none !important; }
+  body.kiosk-mode .grid {
+    max-width: 100%; padding: 8px; height: 100vh; margin: 0;
+  }
+  body.kiosk-mode .grid.force-3x2 {
+    grid-template-rows: repeat(2, 1fr) !important;
+    height: 100vh; box-sizing: border-box;
+  }
+  body.kiosk-mode .grid.force-3x2 .widget { height: 100%; }
+  body.kiosk-mode .grid.force-3x2 .widget-body { max-height: none; flex: 1; }
 
   /* ===== Widget ===== */
   .widget {
@@ -221,7 +239,10 @@
 <body>
 
 <div class="topbar">📰 Mon Dashboard News
-  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Sombre</button>
+  <div class="topbar-actions">
+    <button class="layout-toggle" id="layoutToggle" onclick="toggleLayout()">🔲 Grille 3×2</button>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Sombre</button>
+  </div>
 </div>
 <div class="tabs" id="tabs"></div>
 <div class="focus-bar" id="focusBar" style="display:none">
@@ -324,6 +345,27 @@ function toggleTheme() {
   applyTheme(next);
 }
 applyTheme(localStorage.getItem("nd_theme") || "light");
+
+// ================== LAYOUT (grille forcée 3x2) ==================
+function applyLayout(force3x2) {
+  document.getElementById("grid").classList.toggle("force-3x2", force3x2);
+  document.getElementById("layoutToggle").classList.toggle("active", force3x2);
+}
+function toggleLayout() {
+  const active = !document.getElementById("grid").classList.contains("force-3x2");
+  localStorage.setItem("nd_layout", active ? "force3x2" : "auto");
+  applyLayout(active);
+  document.body.classList.toggle("kiosk-mode", active);
+}
+applyLayout(localStorage.getItem("nd_layout") === "force3x2");
+
+document.addEventListener("keydown", e => {
+  const tag = document.activeElement.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+  if (e.key.toLowerCase() === "g" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    toggleLayout();
+  }
+});
 
 // ================== ÉTAT (localStorage) ==================
 const store = {
