@@ -6,7 +6,7 @@ Statut : validé, prêt pour plan d'implémentation
 ## Contexte
 
 Seize Consulting veut coacher ses nouveaux arrivants (Stagiaire à Consultant Sénior) via un
-appairage automatique avec un coach interne, suivi pendant 1 an. Le dispositif Excel actuel
+appairage automatique avec un coach interne. Le dispositif Excel actuel
 n'est pas à jour : le champ `cf_1_coach` de Furious est obsolète, aucune date d'attribution
 n'est fiable, aucun historique n'existe.
 
@@ -40,15 +40,15 @@ Départs : voir §Détection des départs.
 
 | # | Règle | Traitement | Détail |
 |---|---|---|---|
-| RG·AT0 | Qui est coaché | Filtre | Grade dans {Stagiaire, Consultant Junior, Consultant Expérimenté, Consultant Sénior}. À partir de Manager : pas coaché, entre dans le vivier de coachs. |
-| RG·AT1 | Écart de grade | Filtre en cascade | >= 2 grades en priorité ; si aucun candidat ne survit avec 2, le filtre s'assouplit automatiquement à >= 1 grade pour ce coaché. Cas stagiaire : parrain >= Consultant Expérimenté, quel que soit le palier. |
-| RG·AT2 | Ancienneté du coach | Filtre | `arrival_date` >= 1 an. Champ confirmé disponible sur l'objet Utilisateur. |
+| RG·AT0 | Qui est coaché / qui coache | Filtre | Coaché : grade dans {Stagiaire, Consultant Junior, Consultant Expérimenté, Consultant Sénior}. Coach : à partir de Manager, **ou** Consultant Junior sous condition RG·AT2 (voir ligne suivante). Un Consultant Junior peut donc être à la fois coaché (par un Expérimenté+) et coach (d'un Stagiaire), ce ne sont pas des ensembles disjoints. |
+| RG·AT1 | Écart de grade | Filtre en cascade | >= 2 grades en priorité ; si aucun candidat ne survit avec 2, le filtre s'assouplit automatiquement à >= 1 grade pour ce coaché. **Deux viviers possibles pour un Stagiaire** : parrain >= Consultant Expérimenté (écart >= 2, palier prioritaire) **ou**, si la cascade descend au palier assoupli, un Consultant Junior éligible via RG·AT0 (écart = 1). Aucun écart de 0 n'est jamais autorisé. |
+| RG·AT2 | Ancienneté du coach | Filtre | `arrival_date` >= 1 an, **tout coach potentiel confondu** — y compris un Consultant Junior (cf. RG·AT0). Champ confirmé disponible sur l'objet Utilisateur. |
 | RG·CAP | Capacité du coach | Filtre | 1 coaché actif max par coach (viable en V1 grâce au périmètre "arrivées seulement"). |
 | RG·NT1 | Mission différente | Bloquant **si la donnée existe** | Coach exclu s'il a une ligne active dans Grille tarifaire projet sur le même `project_id` que le coaché. Si le coaché n'a aucune affectation connue (stagiaire non staffé, inter-contrat), la règle est **sans objet** et n'empêche pas l'attribution. Voir §Stabilité du lien. |
 | RG·NT2 | Client différent | Malus (non bloquant) | Même logique via `Project.company_name`. Un appairage même-client reste possible en dernier recours. Sans objet si pas d'affectation connue. |
 | RG·NT3 | Ouverture inter-pôles | Bonus | `bu_name` différente entre coach et coaché. |
 | ~~RG·VOL~~ | ~~Volontariat~~ | **Retiré de l'automatisation** | Le consentement des coachs est recueilli en interne, de vive voix, après proposition du moteur. Voir §Processus d'attribution. |
-| RG·FIN | Durée du lien | — | 1 an. À échéance, clôture automatique, le coach retourne au vivier. |
+| ~~RG·FIN~~ | ~~Durée du lien~~ | **Mise de côté** | Plus de clôture automatique à 1 an. Le lien dure tant qu'il n'est pas rompu explicitement (départ, ou demande) — cf. §Stabilité du lien. |
 
 ### Scoring (candidats survivants aux filtres bloquants)
 
@@ -88,8 +88,9 @@ Conséquences assumées :
   que le conflit de neutralité qu'on cherchait à éviter.
 - Aucune alerte, aucune réattribution sur ce motif. Comportement voulu, pas défaut à corriger.
 
-Seuls trois événements clôturent un coaching : l'échéance des 12 mois (RG·FIN), le départ de
-l'une des deux personnes, ou une demande explicite.
+Seuls deux événements clôturent un coaching : le départ de l'une des deux personnes, ou une
+demande explicite. Il n'y a plus d'échéance automatique (RG·FIN mise de côté) — un lien peut
+durer plusieurs années si les deux parties le souhaitent.
 
 ## Données Furious
 
@@ -195,9 +196,8 @@ coaching (
   at1_assoupli,     -- true si la cascade RG·AT1 est descendue à 1 grade
   date_proposition, -- écrite par le moteur
   date_debut,       -- NULL tant que non validé ; = date de validation humaine
-  date_fin_prevue,  -- date_debut + 1 an, calculée à la validation
-  date_fin_reelle,
-  motif_fin,        -- echeance | depart | demande
+  date_fin_reelle,  -- NULL tant que le lien est actif ; pas de date prévue (RG·FIN mise de côté)
+  motif_fin,        -- depart | demande
   origine,          -- arrivee | rattrapage (V2, non utilisé en V1)
   created_at
 )
@@ -225,8 +225,8 @@ Moteur désigne le meilleur candidat
 
 Un humain (RH / Office Manager) sollicite coach et coaché de vive voix
   -> accord obtenu   : clic "Valider" dans le Frame
-                       statut = actif, date_debut = date de validation,
-                       date_fin_prevue = date_debut + 1 an
+                       statut = actif, date_debut = date de validation
+                       (pas de date de fin prévue — durée illimitée par défaut)
   -> refus           : clic "Rejeter", le moteur propose le candidat suivant du classement
 ```
 
@@ -249,8 +249,8 @@ Furious API  ──(lecture seule, quotidien)──>  n8n  ──>  PostgreSQL
 ```
 
 - **n8n (batch quotidien)** : synchronise le miroir `collaborateur`, détecte arrivées/départs,
-  fait tourner le moteur de matchmaking, écrit les propositions, clôture les coachings arrivés
-  à échéance (RG·FIN).
+  fait tourner le moteur de matchmaking, écrit les propositions, clôture les coachings dont
+  le coach ou le coaché est parti (plus de clôture par échéance, RG·FIN mise de côté).
 - **n8n (webhooks)** : expose les endpoints appelés par le Frame — lister les propositions en
   attente, valider, rejeter, consulter les coachings actifs.
 - **Frame Dust** : interface de lecture et d'action. Capacité d'appel de webhook externe
@@ -275,6 +275,11 @@ authentification par header sur les endpoints qui écrivent (valider / rejeter).
 - RG·CAP compte les coachings en statut `actif` uniquement. Une proposition en attente ne
   réserve pas la place du coach : deux propositions simultanées peuvent viser le même coach.
   Acceptable au volume V1 (quelques arrivées/mois), à revoir si les propositions s'accumulent.
+- **RG·FIN mise de côté → le vivier de coachs se tend avec le temps.** Sans clôture à échéance,
+  un coach qui accepte un coaché ne libère sa place que par départ ou demande explicite. Sur
+  plusieurs années, si peu de liens se rompent, le nombre de coachs disponibles peut diminuer
+  au point de bloquer de nouvelles attributions. Pas un problème en V1 (faible volume), mais un
+  indicateur à surveiller : nombre de coachs "pleins" dans le temps.
 
 ## Prochaines étapes
 
