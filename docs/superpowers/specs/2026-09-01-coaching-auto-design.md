@@ -44,8 +44,8 @@ Départs : voir §Détection des départs.
 | RG·AT1 | Écart de grade | Filtre en cascade | >= 2 grades en priorité ; si aucun candidat ne survit avec 2, le filtre s'assouplit automatiquement à >= 1 grade pour ce coaché. Cas stagiaire : parrain >= Consultant Expérimenté, quel que soit le palier. |
 | RG·AT2 | Ancienneté du coach | Filtre | `arrival_date` >= 1 an. Champ confirmé disponible sur l'objet Utilisateur. |
 | RG·CAP | Capacité du coach | Filtre | 1 coaché actif max par coach (viable en V1 grâce au périmètre "arrivées seulement"). |
-| RG·NT1 | Mission différente | Bloquant | Coach exclu s'il a une ligne active dans Grille tarifaire projet sur le même `project_id` que le coaché (voir §Données mission, limite connue sur les dates). |
-| RG·NT2 | Client différent | Malus (non bloquant) | Même logique via `Project.company_name`. Un appairage même-client reste possible en dernier recours. |
+| RG·NT1 | Mission différente | Bloquant **si la donnée existe** | Coach exclu s'il a une ligne active dans Grille tarifaire projet sur le même `project_id` que le coaché. Si le coaché n'a aucune affectation connue (stagiaire non staffé, inter-contrat), la règle est **sans objet** et n'empêche pas l'attribution. Voir §Stabilité du lien. |
+| RG·NT2 | Client différent | Malus (non bloquant) | Même logique via `Project.company_name`. Un appairage même-client reste possible en dernier recours. Sans objet si pas d'affectation connue. |
 | RG·NT3 | Ouverture inter-pôles | Bonus | `bu_name` différente entre coach et coaché. |
 | RG·VOL | Volontariat | Filtre + bonus | Table `coach_eligibilite.volontariat` : `non` -> exclu, `oui++` -> bonus au score. |
 | RG·FIN | Durée du lien | — | 1 an. À échéance, clôture automatique, le coach retourne au vivier. |
@@ -71,6 +71,26 @@ Départs : voir §Détection des départs.
 L'assouplissement est journalisé (motif visible dans le mail d'attribution et dans
 `coaching`), pour permettre un suivi de fréquence — si la cascade au palier 1 devient
 majoritaire, c'est le signe que le vivier de coachs est structurellement insuffisant.
+
+## Stabilité du lien de coaching
+
+**Principe : RG·NT1 et RG·NT2 sont des critères d'attribution, pas des conditions permanentes.**
+Ils s'appliquent au moment de l'appairage, avec l'information disponible à cet instant. Une fois
+le lien créé, il n'est jamais réévalué.
+
+Conséquences assumées :
+
+- **Déclencheur = l'arrivée**, pas l'entrée en mission. Un nouvel arrivant sans affectation
+  connue (stagiaire, apprenti, inter-contrat) reçoit quand même un coach : RG·NT1/NT2 sont
+  alors sans objet, l'appairage se fait sur grade + ancienneté + volontariat.
+- **Un changement de mission ne rompt rien.** Si le coaché rejoint plus tard la mission de son
+  coach — cas fréquent pour les stagiaires, staffés typiquement 1 à 2 mois après leur arrivée —
+  le lien est maintenu. Casser une relation établie depuis plusieurs mois ferait plus de dégâts
+  que le conflit de neutralité qu'on cherchait à éviter.
+- Aucune alerte, aucune réattribution sur ce motif. Comportement voulu, pas défaut à corriger.
+
+Seuls trois événements clôturent un coaching : l'échéance des 12 mois (RG·FIN), le départ de
+l'une des deux personnes, ou une demande explicite.
 
 ## Données Furious
 
@@ -209,6 +229,8 @@ imparfaite (pas de date fine sur les affectations).
 
 - RG·NT1/NT2 reposent sur "ligne d'affectation existante + projet actif", pas sur une fenêtre
   temporelle précise (donnée absente côté Furious malgré la documentation Swagger).
+- Un coaché sans affectation au moment de l'attribution (stagiaire, inter-contrat) est appairé
+  sans contrôle de neutralité mission/client. Assumé, cf. §Stabilité du lien.
 - `departure_date` n'étant pas fiable aujourd'hui, la détection de départ a un délai correspondant
   au temps entre le départ réel et la suppression du compte Furious (observé : plusieurs semaines).
 - Le rattrapage du stock existant (83 personnes sans coach) n'est pas traité — V2.
