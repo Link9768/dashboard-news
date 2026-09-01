@@ -47,13 +47,12 @@ Départs : voir §Détection des départs.
 | RG·NT1 | Mission différente | Bloquant **si la donnée existe** | Coach exclu s'il a une ligne active dans Grille tarifaire projet sur le même `project_id` que le coaché. Si le coaché n'a aucune affectation connue (stagiaire non staffé, inter-contrat), la règle est **sans objet** et n'empêche pas l'attribution. Voir §Stabilité du lien. |
 | RG·NT2 | Client différent | Malus (non bloquant) | Même logique via `Project.company_name`. Un appairage même-client reste possible en dernier recours. Sans objet si pas d'affectation connue. |
 | RG·NT3 | Ouverture inter-pôles | Bonus | `bu_name` différente entre coach et coaché. |
-| RG·VOL | Volontariat | Filtre + bonus | Table `coach_eligibilite.volontariat` : `non` -> exclu, `oui++` -> bonus au score. |
+| ~~RG·VOL~~ | ~~Volontariat~~ | **Retiré de l'automatisation** | Le consentement des coachs est recueilli en interne, de vive voix, après proposition du moteur. Voir §Processus d'attribution. |
 | RG·FIN | Durée du lien | — | 1 an. À échéance, clôture automatique, le coach retourne au vivier. |
 
 ### Scoring (candidats survivants aux filtres bloquants)
 
 ```
-+ volontariat "oui++"
 + pôle différent (RG·NT3)
 - même client (RG·NT2)
 - coach déjà sollicité récemment (équité de charge)
@@ -82,7 +81,7 @@ Conséquences assumées :
 
 - **Déclencheur = l'arrivée**, pas l'entrée en mission. Un nouvel arrivant sans affectation
   connue (stagiaire, apprenti, inter-contrat) reçoit quand même un coach : RG·NT1/NT2 sont
-  alors sans objet, l'appairage se fait sur grade + ancienneté + volontariat.
+  alors sans objet, l'appairage se fait sur grade + ancienneté + capacité.
 - **Un changement de mission ne rompt rien.** Si le coaché rejoint plus tard la mission de son
   coach — cas fréquent pour les stagiaires, staffés typiquement 1 à 2 mois après leur arrivée —
   le lien est maintenu. Casser une relation établie depuis plusieurs mois ferait plus de dégâts
@@ -188,42 +187,79 @@ collaborateur (
   arrival_date, actif, date_disparition, synced_at
 )
 
--- Vérité métier. Une ligne par période de coaching, jamais d'écrasement.
+-- Vérité métier. Une ligne par proposition puis par période de coaching, jamais d'écrasement.
 coaching (
   id, coache_id, coach_id,
-  date_debut, date_fin_prevue, date_fin_reelle,
-  statut,       -- actif | termine | interrompu
-  motif_fin,    -- echeance | depart | refus | demande
-  origine,      -- arrivee | rattrapage (V2, non utilisé en V1)
+  statut,           -- propose | actif | termine | rejete
+  score, motif_score,   -- traçabilité du classement, affichée dans le Frame
+  at1_assoupli,     -- true si la cascade RG·AT1 est descendue à 1 grade
+  date_proposition, -- écrite par le moteur
+  date_debut,       -- NULL tant que non validé ; = date de validation humaine
+  date_fin_prevue,  -- date_debut + 1 an, calculée à la validation
+  date_fin_reelle,
+  motif_fin,        -- echeance | depart | demande
+  origine,          -- arrivee | rattrapage (V2, non utilisé en V1)
   created_at
 )
 
--- Volontariat et exclusions, saisis/maintenus par un humain.
+-- Exclusions du dispositif, saisies/maintenues par un humain.
 coach_eligibilite (
-  furious_id, volontariat,     -- non | oui | oui++
+  furious_id,
   exclu_dispositif, motif_exclusion,  -- parti | compte technique | fonction support | demande
   commentaire, updated_at, updated_by
 )
 ```
 
-## Processus d'attribution — double consentement
+Le volontariat (ancien RG·VOL) ne figure plus dans ce schéma : il est traité hors système.
 
-Ni attribution automatique sèche, ni validation RH intermédiaire : les deux personnes
-concernées valident elles-mêmes, cohérent avec le principe de consentement porté par Jules.
+## Processus d'attribution — proposition puis validation humaine
+
+Le moteur **propose**, il n'attribue pas. Le consentement des personnes concernées est recueilli
+en interne, hors système. Aucun mail automatique de demande d'accord n'est envoyé — un seul
+circuit de consentement, humain, pour éviter deux canaux contradictoires.
 
 ```
-Moteur désigne un candidat (meilleur score) -> mail au coach ET au coaché
-  - 2x Accepté        -> ligne écrite dans `coaching`, date_debut = date d'acceptation
-  - 1x Refusé (ou +)  -> candidat suivant du classement proposé
-  - Sans réponse 7j   -> relance, puis passage au suivant
+Moteur désigne le meilleur candidat
+  -> écrit une ligne `coaching` en statut "propose"
+  -> le Frame Dust l'affiche dans la liste des propositions en attente
+
+Un humain (RH / Office Manager) sollicite coach et coaché de vive voix
+  -> accord obtenu   : clic "Valider" dans le Frame
+                       statut = actif, date_debut = date de validation,
+                       date_fin_prevue = date_debut + 1 an
+  -> refus           : clic "Rejeter", le moteur propose le candidat suivant du classement
 ```
 
-Le refus n'est pas motivé obligatoirement — forcer une justification décourage les refus
-légitimes ; un refus silencieux est une information suffisante pour le moteur.
+Le Frame affiche, pour chaque proposition : le score, le motif du classement, la mission et le
+client du coaché — ce dernier point servant de garde-fou humain à RG·NT1/NT2, dont la fiabilité
+dépend d'une donnée Furious imparfaite.
 
-Mention explicite de la mission/client du coaché dans le mail au coach pressenti : sert de
-garde-fou humain complémentaire à RG·NT1/NT2, dont la fiabilité dépend d'une donnée Furious
-imparfaite (pas de date fine sur les affectations).
+Une proposition sans suite n'expire pas automatiquement : elle reste visible dans le Frame
+jusqu'à traitement. Le nombre de propositions en attente est un indicateur de santé du dispositif.
+
+## Architecture
+
+```
+Furious API  ──(lecture seule, quotidien)──>  n8n  ──>  PostgreSQL
+                                               │           ▲
+                                               │           │
+                                          webhooks    lecture/écriture
+                                               │           │
+                                               └──  Frame Dust  (UI)
+```
+
+- **n8n (batch quotidien)** : synchronise le miroir `collaborateur`, détecte arrivées/départs,
+  fait tourner le moteur de matchmaking, écrit les propositions, clôture les coachings arrivés
+  à échéance (RG·FIN).
+- **n8n (webhooks)** : expose les endpoints appelés par le Frame — lister les propositions en
+  attente, valider, rejeter, consulter les coachings actifs.
+- **Frame Dust** : interface de lecture et d'action. Capacité d'appel de webhook externe
+  confirmée. Aucune logique métier côté Frame — il affiche ce que n8n lui renvoie et déclenche
+  des actions via webhook.
+- **PostgreSQL** : seule source de vérité du dispositif.
+
+Sécurité des webhooks : `webhookId` explicite (UUID) obligatoire sur chaque node Webhook, et
+authentification par header sur les endpoints qui écrivent (valider / rejeter).
 
 ## Limites connues de la V1
 
@@ -234,8 +270,11 @@ imparfaite (pas de date fine sur les affectations).
 - `departure_date` n'étant pas fiable aujourd'hui, la détection de départ a un délai correspondant
   au temps entre le départ réel et la suppression du compte Furious (observé : plusieurs semaines).
 - Le rattrapage du stock existant (83 personnes sans coach) n'est pas traité — V2.
-- Pas de vérification de refus/répétition abusive (un coach qui refuse systématiquement) — à
-  surveiller manuellement en V1, formaliser si le besoin apparaît.
+- Pas de vérification de refus/répétition abusive (un coach systématiquement rejeté par la
+  validation humaine) — à surveiller manuellement en V1, formaliser si le besoin apparaît.
+- RG·CAP compte les coachings en statut `actif` uniquement. Une proposition en attente ne
+  réserve pas la place du coach : deux propositions simultanées peuvent viser le même coach.
+  Acceptable au volume V1 (quelques arrivées/mois), à revoir si les propositions s'accumulent.
 
 ## Prochaines étapes
 
