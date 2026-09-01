@@ -12,17 +12,46 @@ n'est fiable, aucun historique n'existe.
 
 ## Périmètre V1
 
-**Uniquement les nouveaux arrivants**, au fil de l'eau. Pas de rattrapage des 83 collaborateurs
-déjà en poste sans coach — décision explicite, pour deux raisons :
+**Revirement du 2026-09-01 : le rattrapage du stock existant entre dans le périmètre V1.**
+La décision initiale ("nouveaux arrivants uniquement, stock existant en V2") est abandonnée.
+Deux mécanismes compensent le déficit structurel identifié à l'origine (56 coachés potentiels
+pour 29 coachs) : la clôture automatique par sortie de grade (§Fin de coaching par changement
+de grade) et l'assouplissement de RG·CAP (§Règles de matchmaking). Le principe qui justifiait
+l'exclusion du stock — éviter des dizaines d'appairages non vérifiés le même jour — reste
+valable opérationnellement : le traitement du stock doit être **amorcé progressivement**, pas
+déclenché en un seul batch, cf. §Amorçage.
 
-- le volume réel (quelques arrivées/mois) rend le déficit structurel non pertinent en V1 ;
-  RG·CAP=1 (décision du 03/08) est arithmétiquement intenable sur un traitement en lot (56
-  candidats pour 29 coachs), mais tout à fait viable sur un flux d'arrivées.
-- un dispositif RH qui rate son lancement (56 appairages douteux le même jour si une règle a
-  un bug) ne se relance pas. Un flux de 2-3/mois permet de corriger en marche.
+L'automatisation continue de traiter :
+1. les **nouveaux arrivants**, au fil de l'eau (flux, mécanisme inchangé) ;
+2. le **stock existant** identifié le 2026-09-01 (voir liste ci-dessous), traité comme des
+   propositions à valider au même titre que les nouveaux arrivants — pas d'écriture automatique
+   sans validation humaine, cf. §Processus d'attribution.
 
-Le rattrapage du stock existant est une V2 explicitement hors scope, permise par le schéma de
-données (colonne `origine` sur la table `coaching`), mais non développée ici.
+### État observé au 2026-09-01 (base de l'amorçage)
+
+**Liens actuels à réexaminer** — le coaché a dépassé le grade limite de RG·AT0, son coach doit
+être libéré automatiquement (cf. §Fin de coaching par changement de grade) :
+
+| Grade actuel du coaché | Coaché | Coach |
+|---|---|---|
+| Manager | Bastien Cabanes | Philippe Spoljaric |
+| Manager | Luc Chapelle | Georges Baguenier Desormeaux |
+| Manager | Baptiste Lambert | Sinda Yacoubi |
+| Manager | Laurène Masclet | Yves Canaux de Bonfils |
+| Manager | Sinda Yacoubi | Yves Canaux de Bonfils |
+| Expert | Ronan Lambert | Sinda Yacoubi |
+
+**Consultants Juniors actuellement sans coach**, à intégrer au moteur de proposition :
+Benjamin Chouquet, Chaima Fekih Salem, Titouan Gragnic, Hedi Kalboussi, Anis Khaldi,
+Amine Saidi.
+
+**Consultants Séniors actuellement sans coach**, à intégrer au moteur de proposition :
+Amélie Grandmougin, Farah Helal, Alexis-François Papin.
+
+*Note : la table "Manager coach X" fournie deux fois (une fois sous "Manager", une fois sous
+"Consultant expérimenté") — traitée comme un seul et même jeu de données, la duplication étant
+un doublon de saisie. À confirmer si une deuxième liste distincte existait pour les Consultants
+Expérimentés.*
 
 ## Exclusions du dispositif
 
@@ -43,12 +72,13 @@ Départs : voir §Détection des départs.
 | RG·AT0 | Qui est coaché / qui coache | Filtre | Coaché : grade dans {Stagiaire, Consultant Junior, Consultant Expérimenté, Consultant Sénior}. Coach : à partir de Manager, **ou** Consultant Junior sous condition RG·AT2 (voir ligne suivante). Un Consultant Junior peut donc être à la fois coaché (par un Expérimenté+) et coach (d'un Stagiaire), ce ne sont pas des ensembles disjoints. |
 | RG·AT1 | Écart de grade | Filtre en cascade | >= 2 grades en priorité ; si aucun candidat ne survit avec 2, le filtre s'assouplit automatiquement à >= 1 grade pour ce coaché. **Deux viviers possibles pour un Stagiaire** : parrain >= Consultant Expérimenté (écart >= 2, palier prioritaire) **ou**, si la cascade descend au palier assoupli, un Consultant Junior éligible via RG·AT0 (écart = 1). Aucun écart de 0 n'est jamais autorisé. |
 | RG·AT2 | Ancienneté du coach | Filtre | `arrival_date` >= 1 an, **tout coach potentiel confondu** — y compris un Consultant Junior (cf. RG·AT0). Champ confirmé disponible sur l'objet Utilisateur. |
-| RG·CAP | Capacité du coach | Filtre | 1 coaché actif max par coach (viable en V1 grâce au périmètre "arrivées seulement"). |
+| RG·CAP | Capacité du coach | Filtre | 1 coaché actif par défaut. Extensible à 2 uniquement sur accord explicite du coach (pas un CAP global à 2 — une exception par coach, tracée). |
 | RG·NT1 | Mission différente | Bloquant **si la donnée existe** | Coach exclu s'il a une ligne active dans Grille tarifaire projet sur le même `project_id` que le coaché. Si le coaché n'a aucune affectation connue (stagiaire non staffé, inter-contrat), la règle est **sans objet** et n'empêche pas l'attribution. Voir §Stabilité du lien. |
 | RG·NT2 | Client différent | Malus (non bloquant) | Même logique via `Project.company_name`. Un appairage même-client reste possible en dernier recours. Sans objet si pas d'affectation connue. |
 | RG·NT3 | Ouverture inter-pôles | Bonus | `bu_name` différente entre coach et coaché. |
 | ~~RG·VOL~~ | ~~Volontariat~~ | **Retiré de l'automatisation** | Le consentement des coachs est recueilli en interne, de vive voix, après proposition du moteur. Voir §Processus d'attribution. |
-| ~~RG·FIN~~ | ~~Durée du lien~~ | **Mise de côté** | Plus de clôture automatique à 1 an. Le lien dure tant qu'il n'est pas rompu explicitement (départ, ou demande) — cf. §Stabilité du lien. |
+| ~~RG·FIN~~ | ~~Durée du lien~~ | **Mise de côté** | Plus de clôture à échéance fixe (1 an). Le lien dure jusqu'à un départ, une demande explicite, ou une sortie de grade (RG·GRADE ci-dessous). |
+| RG·GRADE | Fin par changement de grade | **Clôture automatique** | Dès que le grade du coaché sort de RG·AT0 (>= Manager), le lien est clôturé sans validation humaine et le coach redevient disponible. Seule clôture automatique du dispositif — tout le reste (attribution, refus) passe par une validation humaine. |
 
 ### Scoring (candidats survivants aux filtres bloquants)
 
@@ -88,9 +118,16 @@ Conséquences assumées :
   que le conflit de neutralité qu'on cherchait à éviter.
 - Aucune alerte, aucune réattribution sur ce motif. Comportement voulu, pas défaut à corriger.
 
-Seuls deux événements clôturent un coaching : le départ de l'une des deux personnes, ou une
-demande explicite. Il n'y a plus d'échéance automatique (RG·FIN mise de côté) — un lien peut
-durer plusieurs années si les deux parties le souhaitent.
+Trois événements clôturent un coaching : le départ de l'une des deux personnes, une demande
+explicite, ou la sortie de grade du coaché (RG·GRADE — seule clôture automatique, sans
+validation humaine, cf. §Règles de matchmaking). Il n'y a plus d'échéance automatique fixe
+(RG·FIN mise de côté) — un lien peut durer plusieurs années si les deux parties le souhaitent
+et que le coaché reste dans la tranche de grades coachée.
+
+**RG·GRADE ne contredit pas le principe ci-dessus** : la stabilité du lien porte sur RG·NT1/NT2
+(mission, client), qui ne sont jamais réévalués après attribution. RG·GRADE est une clôture par
+sortie de périmètre (RG·AT0), une logique différente — le dispositif ne coache plus ce grade,
+il n'y a plus de justification à maintenir le lien.
 
 ## Données Furious
 
@@ -197,8 +234,9 @@ coaching (
   date_proposition, -- écrite par le moteur
   date_debut,       -- NULL tant que non validé ; = date de validation humaine
   date_fin_reelle,  -- NULL tant que le lien est actif ; pas de date prévue (RG·FIN mise de côté)
-  motif_fin,        -- depart | demande
-  origine,          -- arrivee | rattrapage (V2, non utilisé en V1)
+  motif_fin,        -- depart | demande | sortie_grade
+  origine,          -- arrivee | rattrapage
+  cap_etendu,       -- true si ce coach a explicitement accepté un 2e coaché (dérogation RG·CAP)
   created_at
 )
 
@@ -237,6 +275,27 @@ dépend d'une donnée Furious imparfaite.
 Une proposition sans suite n'expire pas automatiquement : elle reste visible dans le Frame
 jusqu'à traitement. Le nombre de propositions en attente est un indicateur de santé du dispositif.
 
+## Amorçage du stock existant
+
+Le stock (§Périmètre V1) n'est pas injecté d'un coup. Il est traité par lots, dans cet ordre :
+
+```
+1. Clôturer les 6 liens identifiés où le coaché a dépassé le grade limite (RG·GRADE)
+   -> les coachs concernés (Philippe Spoljaric, Georges Baguenier Desormeaux, Sinda Yacoubi,
+      Yves Canaux de Bonfils) reviennent dans le vivier disponible
+
+2. Générer les propositions pour les 9 collaborateurs identifiés sans coach
+   (6 Consultants Juniors + 3 Consultants Séniors), par lot de 3-4 max par jour
+   -> mêmes règles, même écran de validation que pour un nouvel arrivant
+
+3. Reprendre le reste du stock (collaborateurs non listés le 2026-09-01, hors ceux déjà
+   couverts) au même rythme progressif, jusqu'à résorption
+```
+
+Le rythme par lot n'est pas fixé arbitrairement — il doit rester assez faible pour que chaque
+proposition validée serve de test sur les règles avant le lot suivant, dans le même esprit que
+le traitement au fil de l'eau des nouveaux arrivants.
+
 ## Architecture
 
 ```
@@ -249,8 +308,9 @@ Furious API  ──(lecture seule, quotidien)──>  n8n  ──>  PostgreSQL
 ```
 
 - **n8n (batch quotidien)** : synchronise le miroir `collaborateur`, détecte arrivées/départs,
-  fait tourner le moteur de matchmaking, écrit les propositions, clôture les coachings dont
-  le coach ou le coaché est parti (plus de clôture par échéance, RG·FIN mise de côté).
+  détecte les sorties de grade (clôture automatique RG·GRADE), fait tourner le moteur de
+  matchmaking sur les arrivées et sur le stock encore non traité, écrit les propositions,
+  clôture les coachings dont le coach ou le coaché est parti.
 - **n8n (webhooks)** : expose les endpoints appelés par le Frame — lister les propositions en
   attente, valider, rejeter, consulter les coachings actifs.
 - **Frame Dust** : interface de lecture et d'action. Capacité d'appel de webhook externe
@@ -269,17 +329,19 @@ authentification par header sur les endpoints qui écrivent (valider / rejeter).
   sans contrôle de neutralité mission/client. Assumé, cf. §Stabilité du lien.
 - `departure_date` n'étant pas fiable aujourd'hui, la détection de départ a un délai correspondant
   au temps entre le départ réel et la suppression du compte Furious (observé : plusieurs semaines).
-- Le rattrapage du stock existant (83 personnes sans coach) n'est pas traité — V2.
 - Pas de vérification de refus/répétition abusive (un coach systématiquement rejeté par la
   validation humaine) — à surveiller manuellement en V1, formaliser si le besoin apparaît.
 - RG·CAP compte les coachings en statut `actif` uniquement. Une proposition en attente ne
   réserve pas la place du coach : deux propositions simultanées peuvent viser le même coach.
-  Acceptable au volume V1 (quelques arrivées/mois), à revoir si les propositions s'accumulent.
-- **RG·FIN mise de côté → le vivier de coachs se tend avec le temps.** Sans clôture à échéance,
-  un coach qui accepte un coaché ne libère sa place que par départ ou demande explicite. Sur
-  plusieurs années, si peu de liens se rompent, le nombre de coachs disponibles peut diminuer
-  au point de bloquer de nouvelles attributions. Pas un problème en V1 (faible volume), mais un
-  indicateur à surveiller : nombre de coachs "pleins" dans le temps.
+  Acceptable au volume V1, à revoir si les propositions s'accumulent.
+- **RG·FIN mise de côté, en partie compensée par RG·GRADE.** Un coach ne libère sa place que
+  par départ, demande explicite, ou sortie de grade de son coaché — pas par simple échéance.
+  RG·GRADE réduit la tension sur le vivier (les Managers+ ne restent jamais coachés) mais ne
+  l'élimine pas : un lien avec un Consultant Sénior qui reste longtemps à ce grade immobilise
+  son coach durablement. Indicateur à surveiller : nombre de coachs "pleins" dans le temps.
+- L'amorçage du stock (§Amorçage) dépend d'un état observé manuellement le 2026-09-01, non
+  d'une requête automatisée : à re-vérifier par le moteur au premier run plutôt que pris pour
+  acquis, l'état ayant pu changer entre l'observation et la mise en production.
 
 ## Prochaines étapes
 
