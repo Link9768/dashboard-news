@@ -17,15 +17,43 @@ jour n'ait été faite. Il n'existe aucun historique fiable de qui a coaché qui
 
 ## 3. Périmètre de la V1
 
-Le dispositif traite **uniquement les nouveaux arrivants**, au fil de leur arrivée chez Seize.
-Les collaborateurs déjà en poste sans coach ne sont pas repris dans cette première version.
+Le dispositif traite deux populations :
 
-Raison : sur l'effectif actuel, il y a davantage de personnes à coacher (56) que de coachs
-disponibles (29) si on voulait traiter tout le monde d'un coup — un lancement en une fois
-produirait des dizaines d'appairages non vérifiés le même jour, avec un risque élevé
-d'erreurs visibles. Traiter les arrivées au fil de l'eau (quelques personnes par mois) permet
-de vérifier que le système fonctionne correctement avant d'envisager, dans une V2, de reprendre
-les collaborateurs déjà en poste.
+1. les **nouveaux arrivants**, au fil de leur arrivée chez Seize ;
+2. les **collaborateurs déjà en poste sans coach**, repris progressivement (mise à jour du
+   2026-09-01 : ce point était initialement reporté à une V2, il est réintégré en V1).
+
+Le déficit structurel identifié au départ — davantage de personnes à coacher (56) que de coachs
+disponibles (29) — est atténué par deux mécanismes : la libération automatique d'un coach dès
+que son coaché change de grade (§6), et la possibilité pour un coach volontaire de suivre 2
+personnes au lieu d'1 (§5).
+
+Le risque d'un lancement en une fois — des dizaines d'appairages non vérifiés le même jour —
+reste traité par un **rattrapage progressif** : le stock est repris par petits lots (quelques
+personnes à la fois), jamais en un seul batch, pour garder la possibilité de corriger si une
+règle se révèle mal calibrée.
+
+### État observé au 2026-09-01, servant de point de départ au rattrapage
+
+**Coachs à libérer immédiatement** (le coaché a dépassé le grade limite du dispositif) :
+
+| Coaché (nouveau grade) | Coach libéré |
+|---|---|
+| Bastien Cabanes (Manager) | Philippe Spoljaric |
+| Luc Chapelle (Manager) | Georges Baguenier Desormeaux |
+| Baptiste Lambert (Manager) | Sinda Yacoubi |
+| Laurène Masclet (Manager) | Yves Canaux de Bonfils |
+| Sinda Yacoubi (Manager) | Yves Canaux de Bonfils |
+| Ronan Lambert (Expert) | Sinda Yacoubi |
+
+**Consultants Juniors sans coach, premier lot du rattrapage** : Benjamin Chouquet, Chaima Fekih
+Salem, Titouan Gragnic, Hedi Kalboussi, Anis Khaldi, Amine Saidi.
+
+**Consultants Séniors sans coach, premier lot du rattrapage** : Amélie Grandmougin, Farah Helal,
+Alexis-François Papin.
+
+Le reste du stock (collaborateurs non listés ci-dessus) est repris ensuite, au même rythme
+progressif.
 
 ## 4. Qui est concerné
 
@@ -45,7 +73,7 @@ l'échelle de coaching.
 |---|---|
 | Écart de grade | Le coach doit avoir au moins 2 grades d'écart avec le coaché. Si aucun coach disponible ne remplit cette condition, la règle s'assouplit à 1 grade d'écart minimum (jamais 0). |
 | Ancienneté du coach | Au moins 1 an chez Seize, sans exception. |
-| Capacité | Un coach ne suit qu'un seul coaché à la fois. |
+| Capacité | Un coach ne suit qu'un seul coaché par défaut. Un coach volontaire peut en suivre 2, mais uniquement sur son accord explicite — jamais imposé. |
 | Mission différente | Un coach ne peut pas être sur la même mission que son coaché, quand cette information est disponible. C'est la règle de neutralité la plus importante : elle évite qu'un coach soit aussi le collègue quotidien de la personne qu'il coache. |
 | Client différent | Préférence pour un coach chez un client différent de celui du coaché — non bloquant : un appairage même-client reste possible en dernier recours plutôt que de laisser quelqu'un sans coach. |
 | Pôle différent | Bonus, non obligatoire : un coach d'un autre pôle/BU favorise l'échange transverse. |
@@ -57,9 +85,19 @@ change ensuite — un lien de coaching, une fois créé, n'est jamais remis en c
 
 ## 6. Durée du lien de coaching
 
-Pas de durée fixe imposée. Un lien de coaching dure tant qu'il n'est pas rompu (départ de
-l'une des deux personnes, ou demande explicite d'y mettre fin). Ce choix permet à un binôme qui
-fonctionne bien de continuer au-delà d'un an, sans limite artificielle.
+Pas de durée fixe imposée. Un lien de coaching dure tant qu'il n'est pas rompu par l'un de ces
+trois événements :
+
+- le départ de l'une des deux personnes ;
+- une demande explicite d'y mettre fin ;
+- **le coaché change de grade et sort du périmètre coaché** (par exemple : passage au grade
+  Manager). Dans ce cas précis, la clôture est **automatique** — c'est la seule décision que le
+  système prend sans validation humaine, parce qu'elle découle directement de la règle "qui est
+  coaché" (§4) plutôt que d'un jugement à porter. Le coach est alors immédiatement remis à
+  disposition pour un nouvel appairage.
+
+En dehors de ce cas, un binôme qui fonctionne bien peut continuer au-delà d'un an, sans limite
+artificielle.
 
 ## 7. Processus d'attribution — décision humaine, pas automatique
 
@@ -106,12 +144,14 @@ valider ou de les rejeter.
 
 ## 11. Ce que cette V1 ne couvre pas
 
-- Les collaborateurs déjà en poste sans coach (report en V2).
 - Le recueil du volontariat des coachs : cette démarche reste faite en interne, de vive voix,
   en dehors du système.
 - Un contrôle automatique de la neutralité mission/client dans les cas où l'affectation n'est
   pas encore connue au moment de l'attribution.
 - Une alerte en cas de coach systématiquement refusé par les personnes sollicitées.
+- L'état du stock au 2026-09-01 (§3) est une observation manuelle, pas une extraction
+  automatisée : le système la revérifiera à sa mise en service, la situation réelle ayant pu
+  évoluer entre-temps.
 
 ## 12. Prochaine étape
 
