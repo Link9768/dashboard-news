@@ -41,9 +41,6 @@ Webhook (webhookId UUID explicite)
 
 Réalisation (plan) : chaîne **linéaire** — Webhook → BGG Search (HTTP) → BGG Candidats (Code) → BGG Thing (HTTP) → BGG Fiche (Code) → Sources (Code : Esprit Jeu, Philibert, Okkazeo en `Promise.allSettled`) → Respond. n8n n'exécute pas les branches en parallèle ; la concurrence se fait dans le node Code.
 
-```
-```
-
 ### Règle de choix du produit (Esprit Jeu, Philibert, Okkazeo ; BGG : mêmes étapes 2–4, restreint au type `boardgame` hors extensions sauf si la requête vise l'extension)
 
 1. Exclure les accessoires : titre contenant `sleeve`, `pochette`, `sticker`, `autocollant`, `pack de stickers`, `kit`, `feuille de score`, `piste de suivi`, `figurine`, `sac`.
