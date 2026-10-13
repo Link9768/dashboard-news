@@ -36,7 +36,12 @@ Webhook (webhookId UUID explicite)
   ├─ BGG        : recherche → fiche → note, votes, durée, poids, année, joueurs, âge, image
   └─ Okkazeo    : recherche → page jeu → JSON-LD (total, min, max) + annonces
                   → filtre codes postaux 10 km
-  → Merge → Code (assemblage) → Respond to Webhook (JSON + Access-Control-Allow-Origin: https://link9768.github.io)
+  → Respond to Webhook (JSON + Access-Control-Allow-Origin: *)
+```
+
+Réalisation (plan) : chaîne **linéaire** — Webhook → BGG Search (HTTP) → BGG Candidats (Code) → BGG Thing (HTTP) → BGG Fiche (Code) → Sources (Code : Esprit Jeu, Philibert, Okkazeo en `Promise.allSettled`) → Respond. n8n n'exécute pas les branches en parallèle ; la concurrence se fait dans le node Code.
+
+```
 ```
 
 ### Règle de choix du produit (Esprit Jeu, Philibert, Okkazeo ; BGG : mêmes étapes 2–4, restreint au type `boardgame` hors extensions sauf si la requête vise l'extension)
@@ -44,7 +49,7 @@ Webhook (webhookId UUID explicite)
 1. Exclure les accessoires : titre contenant `sleeve`, `pochette`, `sticker`, `autocollant`, `pack de stickers`, `kit`, `feuille de score`, `piste de suivi`, `figurine`, `sac`.
 2. Normaliser : minuscules, sans accents, sans ponctuation (`!`, `:`, `-`, `'`), espaces compactés.
 3. Prendre le titre normalisé **égal** à la requête normalisée, version française en priorité.
-4. Sinon, le titre le plus proche (le plus court qui commence par la requête, puis le premier résultat restant).
+4. Sinon, le titre le plus court contenant **tous** les mots de la requête ; sinon `null` (pas de « premier résultat » au hasard).
 
 ### Okkazeo (vérifié dans le navigateur le 2026-10-13 sur `/jeux/16977/clank`)
 
@@ -61,6 +66,7 @@ Webhook (webhookId UUID explicite)
   "philibert": { "note": 4.6, "avis": 23, "titre": "Clank! (VF)", "url": "…" },
   "bgg": { "note": 7.9, "votes": 939, "duree": "30–120", "poids": 2.66, "titre": "Clank!",
            "annee": 2016, "joueurs": "2–4", "age": "12+", "image": "…", "url": "…" },
+  "liens": { "espritjeu": "…", "philibert": "…", "bgg": "…", "okkazeo": "…" },
   "okkazeo": { "total": 14, "min": 20, "max": 190, "url": "…",
                "annonces": [{ "prix": 20, "etat": "excellent", "ville": "Ivry-sur-Seine",
                               "cp": "94200", "date": "2026-09-02",
@@ -84,7 +90,7 @@ Une source en échec vaut `null` : elle ne fait jamais échouer la réponse glob
 | # | Étape | Critère de réussite |
 |---|-------|---------------------|
 | 0 | Workflow de test jetable : fetch Okkazeo, Philibert, Esprit Jeu, BGG (Clank) depuis n8n | HTML/XML reçu, pas de 403. Sinon : stop, proposer une alternative |
-| 1 | Liste des codes postaux ≤ 10 km des Olympiades | Ivry, Montreuil dedans ; Créteil, Versailles dehors |
+| 1 | Liste des codes postaux ≤ 10 km des Olympiades | Ivry, Montreuil, Créteil dedans ; Versailles, Savigny-sur-Orge, Argenteuil dehors |
 | 2 | Branches n8n une par une (BGG → Philibert → Esprit Jeu → Okkazeo) | Exécution réelle par branche, sortie lue |
 | 3 | Merge + Code + Respond to Webhook (CORS) | JSON complet pour les 3 jeux tests |
 | 4 | `index.html` | Rendu vérifié dans Chrome, largeur PC et mobile |
